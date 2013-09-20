@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
       free(guess);
       exit(0);
     }
-    curr_string = getNextString(guess, &i, &possibilities, atoi(argv[2]));
+    guess = getNextString(guess, &i, &possibilities, atoi(argv[2]));
   }
   free(guess);
   printf("no match found\n");
