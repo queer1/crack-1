@@ -14,19 +14,56 @@
 #include <math.h>
 #include <unistd.h>
 #include <crypt.h>
+#include <time.h>
 
-char* getNextString(char* curr_string, int* curr_iteration, int* max_iteration, int keysize) {
-  if ((*curr_iteration)++==*max_iteration) {
-    return NULL;
-  } else {
-    int i = keysize-1;
-    ++curr_string[i];
-    while (curr_string[i]=='{') {
-      curr_string[i--] = 'a';
-      ++curr_string[i];
+// gets the num-th possible string
+char* getNthString(double num) {
+  char* str = malloc(10*sizeof(char));
+  while (num>=0) {
+    double num2 = num;
+    int i = 0;
+    while (((int) num2)>25) {
+      num2/=26;
+      ++i;
     }
-    return curr_string;
+    char toCat = 'a' + (int) num2;
+    strcat(str, &toCat);
+    double toSub = 26;
+    int j=1;
+    while (j++<i) {
+      toSub*=26;
+    }
+    if ((int) num2 == 0) {
+      break;
+    } else {
+      num -= (double) (((int) num2)*toSub);
+    }
   }
+  char n = '\0';
+  strcat(str, &n);
+  return str;
+}
+
+// increments the string
+char* getNextString(char* curr_string) {
+  int i = strlen(curr_string)-1;
+  ++curr_string[i];
+  while (curr_string[i]=='{') {
+    if (i==0) {
+      int newLen = strlen(curr_string)+1;
+      free(curr_string);
+      int j = 0;
+      char* guess = malloc(10*sizeof(char));
+      while (j<newLen) {
+	guess[j++] = 'a';
+      }
+      guess[j] = '\0';
+      return guess;
+    }
+    curr_string[i--] = 'a';
+    ++curr_string[i];
+  }
+  return curr_string;
 }
 
 int main(int argc, char* argv[]) {
@@ -41,34 +78,33 @@ int main(int argc, char* argv[]) {
   char salt[3];
   strncpy(salt, argv[3], 2);
 
-  // calc num of possible strings
-  int i = 0;
-  int possibilities = 1;
-  while (i++<atoi(argv[2])) {
-    possibilities *= 26;
-  }
-  --possibilities;
-
-  // init password guess
-  i = 0;
-  char* guess = malloc((atoi(argv[3])+1)*sizeof(char));
-  while (i<atoi(argv[2])) {
-    guess[i++] = 'a';
+  // find number of possible passwords
+  int keysize = atoi(argv[2]);
+  int i = keysize+1;
+  double possibilities = 0;
+  while (--i>0) {
+    double p = 1;
+    int j = 0;
+    while (j++<i) {
+      p*=26;
+    }
+    possibilities += p;
   }
 
-  // try all possibilities
-  i = 0;
+  // crack it!
+  double k = 0;
   char* hash;
-  while (guess!=NULL) {
+  char* guess;
+  guess = getNthString(0);
+  while (k++<possibilities) {
     hash = crypt(guess, salt);
     if (strcmp(hash, argv[3])==0) {
       printf("%s\n", guess);
       free(guess);
       exit(0);
     }
-    guess = getNextString(guess, &i, &possibilities, atoi(argv[2]));
+    guess = getNextString(guess);
   }
-  free(guess);
   printf("no match found\n");
-
+  free(guess);
 }
