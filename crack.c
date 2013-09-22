@@ -75,7 +75,7 @@ char* getNextString(char* curr_string) {
 }
 
 void* crack(seg* range) {
-  double k = 0;
+  double k = (*range).start;
   char* hash;
   char* guess;
   guess = getNthString((*range).start);
