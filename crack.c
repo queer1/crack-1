@@ -15,65 +15,41 @@
 #include <math.h>
 #include <unistd.h>
 #include <crypt.h>
+#include <math.h>
 
 char SALT[3];
 char TARGET[20];
 
 typedef struct seg seg;
 struct seg {
-  double start;
-  double end;
+  double start, end;
 };
 
 // gets the nth possible string
 char* getNthString(double num) {
   char* str = malloc(10*sizeof(char));
-  while (num>=0) {
-    double num2 = num;
-    int i = 0;
-    while (((int) num2)>25) {
-      num2/=26;
-      ++i;
-    }
-    char toCat = 'a' + (int) num2;
-    strcat(str, &toCat);
-    double toSub = 26;
-    int j=1;
-    while (j++<i) {
-      toSub*=26;
-    }
-    if ((int) num2 == 0) {
-      break;
-    } else {
-      num -= (double) (((int) num2)*toSub);
-    }
-  }
-  char n = '\0';
-  strcat(str, &n);
+  memset(str, '\0', sizeof(str));
+  do {
+    double rem = fmod(num, 26);
+    str[strlen(str)] = 'a' + (int) rem;
+    num = (num-rem)/26;
+  } while (num > 0);
   return str;
 }
 
 // increments the string
-char* getNextString(char* curr_string) {
+char* incrementString(char* curr_string) {
   int i = strlen(curr_string)-1;
-  ++curr_string[i];
-  while (curr_string[i]=='{') {
-    if (i==0) {
-      int newLen = strlen(curr_string)+1;
-      int j = 0;
-      while (j<newLen) {
-	curr_string[j++] = 'a';
-      }
-      curr_string[j] = '\0';
-      return curr_string;
-    }
+  while (++curr_string[i]=='{') {
     curr_string[i--] = 'a';
-    ++curr_string[i];
+    if (i==-1) {
+      return strcat(curr_string, "a");
+    }
   }
   return curr_string;
 }
 
-// in each thread, try the assigned possible strings
+// 1337 haxor
 void* crack(seg* range) {
   double k = range->start;
   char* hash;
@@ -88,7 +64,7 @@ void* crack(seg* range) {
       free(guess);
       exit(3);
     }
-    guess = getNextString(guess);
+    guess = incrementString(guess);
   }
   printf("no match found\n");
   free(guess);
@@ -128,9 +104,9 @@ int main(int argc, char* argv[]) {
   while (thread<threads) {
     range[thread].start = perThread * thread;
     if (thread==threads-1) {
-      range[thread].end = possibilities - 1;
+      range[thread].end = possibilities;
     } else {
-      range[thread].end = (thread+1)*perThread - 1;
+      range[thread].end = (thread+1)*perThread;
     }
     ++thread;
   }
