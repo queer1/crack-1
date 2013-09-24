@@ -73,14 +73,15 @@ char* getNextString(char* curr_string) {
   return curr_string;
 }
 
+// in each thread, try the assigned possible strings
 void* crack(seg* range) {
-  double k = (*range).start;
+  double k = range->start;
   char* hash;
   char* guess;
-  guess = getNthString((*range).start);
+  guess = getNthString(range->start);
   struct crypt_data data;
   data.initialized = 0;
-  while (k++<(*range).end) {
+  while (k++<range->end) {
     hash = crypt_r(guess, SALT, &data);
     if (strcmp(hash, TARGET)==0) {
       printf("%s\n", guess);
