@@ -18,7 +18,6 @@
 
 char SALT[3];
 char TARGET[20];
-struct crypt_data DATA;
 
 typedef struct seg seg;
 struct seg {
@@ -79,8 +78,10 @@ void* crack(seg* range) {
   char* hash;
   char* guess;
   guess = getNthString((*range).start);
+  struct crypt_data data;
+  data.initialized = 0;
   while (k++<(*range).end) {
-    hash = crypt_r(guess, SALT, &DATA);
+    hash = crypt_r(guess, SALT, &data);
     if (strcmp(hash, TARGET)==0) {
       printf("%s\n", guess);
       free(guess);
@@ -123,7 +124,6 @@ int main(int argc, char* argv[]) {
   pthread_t thread_id[threads];
   int thread = 0;
   seg range[threads];
-  DATA.initialized = 0;
   while (thread<threads) {
     range[thread].start = perThread * thread;
     if (thread==threads-1) {
