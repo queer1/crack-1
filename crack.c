@@ -25,28 +25,41 @@ struct seg {
   double start, end;
 };
 
+// reverses a string
+void reverse_string(char* str) {
+  int i = 0;
+  int len = strlen(str);
+  while (i<len/2) {
+    char tmp = str[len-1-i];
+    str[len-i-1] = str[i];
+    str[i++] = tmp;
+  }
+}
+
 // gets the nth possible string
 char* getNthString(double num) {
   char* str = malloc(10*sizeof(char));
   memset(str, '\0', sizeof(str));
+  int i = 0;
   do {
     double rem = fmod(num, 26);
-    str[strlen(str)] = 'a' + (int) rem;
+    str[i++] = 'a' + (int) rem;
     num = (num-rem)/26;
   } while (num > 0);
+  reverse_string(str);
   return str;
 }
 
 // increments the string
-char* incrementString(char* curr_string) {
+void incrementString(char* curr_string) {
   int i = strlen(curr_string)-1;
   while (++curr_string[i]=='{') {
     curr_string[i--] = 'a';
     if (i==-1) {
-      return strcat(curr_string, "a");
+      strcat(curr_string, "a");
+      break;
     }
   }
-  return curr_string;
 }
 
 // 1337 haxor
@@ -54,7 +67,7 @@ void* crack(seg* range) {
   double k = range->start;
   char* hash;
   char* guess;
-  guess = getNthString(range->start);
+  guess = getNthString(k);
   struct crypt_data data;
   data.initialized = 0;
   while (k++<range->end) {
@@ -64,9 +77,8 @@ void* crack(seg* range) {
       free(guess);
       exit(3);
     }
-    guess = incrementString(guess);
+    incrementString(guess);
   }
-  printf("no match found\n");
   free(guess);
 }
 
@@ -86,21 +98,16 @@ int main(int argc, char* argv[]) {
   int i = keysize+1;
   double possibilities = 0;
   while (--i>0) {
-    double p = 1;
-    int j = 0;
-    while (j++<i) {
-      p*=26;
-    }
+    double p = pow(26, i);
     possibilities += p;
   }
 
   // prepare thread data
   strcpy(TARGET, argv[3]);
-  int threads = atoi(argv[1]);
+  int    thread    = 0;
+  int    threads   = atoi(argv[1]);
   double perThread = floor(possibilities/threads);
-  pthread_t thread_id[threads];
-  int thread = 0;
-  seg range[threads];
+  seg    range[threads];
   while (thread<threads) {
     range[thread].start = perThread * thread;
     if (thread==threads-1) {
@@ -113,6 +120,7 @@ int main(int argc, char* argv[]) {
 
   // start threads
   i = 0;
+  pthread_t thread_id[threads];
   while (i<threads) {
     if (pthread_create(&thread_id[i], NULL, crack, &range[i])) {
       perror("Creating thread");
@@ -126,5 +134,7 @@ int main(int argc, char* argv[]) {
   while (i<threads) {
     pthread_join(thread_id[i++], NULL);
   }
+
+  printf("No match found\n");
 
 }
