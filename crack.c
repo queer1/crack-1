@@ -4,16 +4,13 @@
  *   usage: crack threads keysize target
  *
  *   Nathan Bossart
- *   Oct 1, 2013
+ *   Sept 25, 2013
  */
 
 #define _GNU_SOURCE
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <unistd.h>
 #include <crypt.h>
 #include <math.h>
 
@@ -25,19 +22,10 @@ struct seg {
   double start, end;
 };
 
-// reverses a string
-void reverse_string(char* str) {
-  int i = 0;
-  int len = strlen(str);
-  while (i<len/2) {
-    char tmp = str[len-1-i];
-    str[len-i-1] = str[i];
-    str[i++] = tmp;
-  }
-}
-
 // gets the nth possible string
 char* getNthString(double num) {
+
+  // calculate the string
   char* str = malloc(10*sizeof(char));
   memset(str, '\0', sizeof(str));
   int i = 0;
@@ -46,7 +34,16 @@ char* getNthString(double num) {
     str[i++] = 'a' + (int) rem;
     num = (num-rem)/26;
   } while (num > 0);
-  reverse_string(str);
+
+  // reverse the string
+  i = 0;
+  int len = strlen(str);
+  while (i<len/2) {
+    str[len-1-i] = str[len-1-i] ^ str[i];
+    str[i]       = str[len-1-i] ^ str[i];
+    str[len-1-i] = str[len-1-i] ^ str[i];
+    ++i;
+  }
   return str;
 }
 
@@ -64,22 +61,19 @@ void incrementString(char* curr_string) {
 
 // 1337 haxor
 void* crack(seg* range) {
-  double k = range->start;
+  double i = range->start;
   char* hash;
-  char* guess;
-  guess = getNthString(k);
+  char* guess = getNthString(i);
   struct crypt_data data;
   data.initialized = 0;
-  while (k++<range->end) {
+  while (i++<range->end) {
     hash = crypt_r(guess, SALT, &data);
     if (strcmp(hash, TARGET)==0) {
       printf("%s\n", guess);
-      free(guess);
       exit(3);
     }
     incrementString(guess);
   }
-  free(guess);
 }
 
 int main(int argc, char* argv[]) {
@@ -94,34 +88,25 @@ int main(int argc, char* argv[]) {
   strncpy(SALT, argv[3], 2);
 
   // find number of possible passwords
-  int keysize = atoi(argv[2]);
-  int i = keysize+1;
+  int i = atoi(argv[2]);
   double possibilities = 0;
-  while (--i>0) {
-    double p = pow(26, i);
-    possibilities += p;
+  while (i>0) {
+    possibilities += pow(26, i--);
   }
 
-  // prepare thread data
+  // prepare thread data and start threads
   strcpy(TARGET, argv[3]);
-  int    thread    = 0;
-  int    threads   = atoi(argv[1]);
-  double perThread = floor(possibilities/threads);
-  seg    range[threads];
-  while (thread<threads) {
-    range[thread].start = perThread * thread;
-    if (thread==threads-1) {
-      range[thread].end = possibilities;
-    } else {
-      range[thread].end = (thread+1)*perThread;
-    }
-    ++thread;
-  }
-
-  // start threads
-  i = 0;
+  int       threads   = atoi(argv[1]);
+  double    perThread = floor(possibilities/threads);
+  seg       range[threads];
   pthread_t thread_id[threads];
   while (i<threads) {
+    range[i].start = perThread * i;
+    if (i==threads-1) {
+      range[i].end = possibilities;
+    } else {
+      range[i].end = range[i].start + perThread;
+    }
     if (pthread_create(&thread_id[i], NULL, crack, &range[i])) {
       perror("Creating thread");
       exit(1);
@@ -131,10 +116,8 @@ int main(int argc, char* argv[]) {
 
   // join threads
   i = 0;
-  while (i<threads) {
+  do {
     pthread_join(thread_id[i++], NULL);
-  }
-
-  printf("No match found\n");
+  } while (i<threads);
 
 }

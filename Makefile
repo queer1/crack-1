@@ -1,5 +1,2 @@
-CC=gcc
-CFLAGS=-O3 -lcrypt -lpthread -lm -g
-
 crack: crack.c
-	gcc -o $@ $^ $(CFLAGS)
+	gcc crack.c -o crack -O3 -lcrypt -lpthread -lm
