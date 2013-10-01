@@ -59,7 +59,7 @@ void incrementString(char* curr_string) {
   }
 }
 
-// 1337 haxor
+// each thread tries a range of strings
 void* crack(seg* range) {
   double i = range->start;
   char* hash;
